@@ -13,7 +13,7 @@ renameMember = async function (client, guildMember) {
         if (newName === guildMember.user.username) return;
     } else return;
     if (guildMember.guild.ownerId === guildMember.id) {
-        client.logger.error('[nicknames] ' + localize('name-list-cleaner', 'owner-cannot-be-renamed', {u: guildMember.user.username}))
+        client.logger.error('[name-list-cleaner] ' + localize('name-list-cleaner', 'owner-cannot-be-renamed', {u: guildMember.user.username}))
         return;
     }
     if (moduleConf.keepNickname) {
