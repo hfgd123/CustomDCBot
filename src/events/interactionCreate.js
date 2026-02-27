@@ -33,6 +33,13 @@ module.exports.run = async (client, interaction) => {
             content: '⚠️ ' + localize('command', 'module-disabled', {m: command.module})
         });
     }
+    if (typeof command.disabled === 'function' && command.disabled(client)) {
+        if (interaction.isAutocomplete()) return interaction.respond([]);
+        return interaction.reply({
+            ephemeral: true,
+            content: '⚠️ ' + localize('command', 'command-disabled')
+        });
+    }
     if (command && typeof (command || {}).options === 'function') command.options = await command.options(interaction.client);
     const group = interaction.options['_group'];
     const subCommand = interaction.options['_subcommand'];

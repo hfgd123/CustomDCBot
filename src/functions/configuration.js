@@ -93,16 +93,16 @@ async function checkConfigFile(file, moduleName) {
             }));
         }
         let newConfig = exampleFile.configElements ? [] : {};
+        if (exampleFile.configElements && !Array.isArray(configData)) {
+            client.logger.warn(`${builtIn ? '' : '/' + moduleName}/${exampleFile.filename}: This file should be a config-element, but is not. Converting to config-element.`);
+            if (typeof configData === 'object') configData = [configData];
+            else configData = [];
+        }
         if (exampleFile.elementLimits) configData = require('./scnx-integration').verifyLimitedConfigElementFile(client, exampleFile, configData);
 
         let skipOverwrite = false;
         if (exampleFile.skipContentCheck) newConfig = configData;
         else if (exampleFile.configElements) {
-            if (!Array.isArray(configData)) {
-                client.logger.warn(`${builtIn ? '' : '/' + moduleName}/${exampleFile.filename}: This file should be a config-element, but is not. Converting to config-element.`);
-                if (typeof configData === 'object') configData = [configData];
-                else configData = [];
-            }
             for (const object of configData) {
                 const objectData = {};
                 for (const field of exampleFile.content) {

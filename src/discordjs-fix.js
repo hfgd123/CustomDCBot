@@ -88,6 +88,7 @@ function normalizeComponents(components) {
     if (!Array.isArray(components)) return components;
     return components.map(comp => {
         if (!comp || typeof comp !== 'object') return comp;
+        if (typeof comp.toJSON === 'function') return comp;
         const newComp = {...comp};
         if (newComp.type) newComp.type = normalizeComponentType(newComp.type);
         if (newComp.style) newComp.style = normalizeStyle(newComp.style);

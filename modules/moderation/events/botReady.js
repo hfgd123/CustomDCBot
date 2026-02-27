@@ -4,6 +4,7 @@ const {localize} = require('../../../src/functions/localize');
 const {embedType} = require('../../../src/functions/helpers');
 const {scheduleJob} = require('node-schedule');
 const {ChannelType} = require('discord.js');
+const {restoreLockdownState} = require('../lockdown');
 const memberCache = {};
 const durationParser = require('parse-duration');
 
@@ -33,6 +34,8 @@ exports.run = async (client) => {
         deleteExpiredWarns(client).then(() => {
         });
     }
+
+    await restoreLockdownState(client);
 
     const verificationConfig = client.configurations['moderation']['verification'];
     if (!verificationConfig.enabled || !verificationConfig['restart-verification-channel']) return;
