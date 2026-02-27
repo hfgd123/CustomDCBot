@@ -23,6 +23,9 @@ renameMember = async function (client, guildMember) {
             client.logger.error('[name-list-cleaner] ' + localize('name-list-cleaner', 'nickname-error', {u: guildMember.user.username, e: e}))
         }
     } else {
+        if (guildMember.nickname === null) {
+            return;
+        }
         try {
             await guildMember.setNickname(null, localize('name-list-cleaner', 'nickname-reset', {u: guildMember.user.username}));
         } catch (e) {
