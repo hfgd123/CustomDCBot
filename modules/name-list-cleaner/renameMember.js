@@ -8,7 +8,7 @@ renameMember = async function (client, guildMember) {
     if (guildMember.nickname !== null) {
         newName = await checkUsername(client, guildMember.nickname, false);
         if (newName === guildMember.nickname) return;
-    } else if (moduleConf.alsoCheckUsername) {
+    } else if (moduleConf.alsoCheckUsernames) {
         newName = await checkUsername(client, guildMember.user.username, true);
         if (newName === guildMember.user.username) return;
     } else return;
