@@ -34,5 +34,6 @@ module.exports.startGame = async function (channel, number, min, max, ownerID = 
     }));
     await m.pin();
 
-    await unlockChannel(channel, '[guess-the-number] ' + localize('guess-the-number', 'game-started'));
+    const channelLock = await channel.client.models['ChannelLock'].findOne({where: {id: channel.id}});
+    if (channelLock) await unlockChannel(channel, '[guess-the-number] ' + localize('guess-the-number', 'game-started'));
 };

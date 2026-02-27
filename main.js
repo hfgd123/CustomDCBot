@@ -23,33 +23,6 @@ const jsonfile = require('jsonfile');
 const centra = require('centra');
 const readline = require('readline');
 
-const optionTypeMap = {
-    SUB_COMMAND: ApplicationCommandOptionType.Subcommand,
-    SUB_COMMAND_GROUP: ApplicationCommandOptionType.SubcommandGroup,
-    STRING: ApplicationCommandOptionType.String,
-    INTEGER: ApplicationCommandOptionType.Integer,
-    BOOLEAN: ApplicationCommandOptionType.Boolean,
-    USER: ApplicationCommandOptionType.User,
-    CHANNEL: ApplicationCommandOptionType.Channel,
-    ROLE: ApplicationCommandOptionType.Role,
-    MENTIONABLE: ApplicationCommandOptionType.Mentionable,
-    NUMBER: ApplicationCommandOptionType.Number,
-    ATTACHMENT: ApplicationCommandOptionType.Attachment
-};
-const channelTypeMap = {
-    GUILD_TEXT: ChannelType.GuildText,
-    GUILD_VOICE: ChannelType.GuildVoice,
-    GUILD_NEWS: ChannelType.GuildAnnouncement,
-    GUILD_STAGE_VOICE: ChannelType.GuildStageVoice,
-    GUILD_CATEGORY: ChannelType.GuildCategory
-};
-const permissionMap = {
-    ADMINISTRATOR: PermissionFlagsBits.Administrator,
-    MANAGE_EMOJIS_AND_STICKERS: PermissionFlagsBits.ManageGuildExpressions,
-    MODERATE_MEMBERS: PermissionFlagsBits.ModerateMembers,
-    MANAGE_MESSAGES: PermissionFlagsBits.ManageMessages
-};
-
 // Parsing parameters
 let config;
 let confDir = `${__dirname}/config`;
@@ -169,22 +142,24 @@ async function startUp() {
     }
     logger.info(localize('main', 'sync-db'));
     if (scnxSetup) await require('./src/functions/scnx-integration').beforeInit(client);
-    await client.login(config.token).catch(async (e) => {
-        if (e.code === 'TOKEN_INVALID') {
-            if (scnxSetup) await require('./src/functions/scnx-integration').reportIssue(client, {
-                type: 'CORE_FAILURE',
-                errorDescription: 'invalid_token'
-            });
-            logger.fatal(localize('main', 'login-error-token'));
-        } else if (e.code === 'DISALLOWED_INTENTS') {
-            if (scnxSetup) await require('./src/functions/scnx-integration').reportIssue(client, {
-                type: 'CORE_FAILURE',
-                errorDescription: 'disallowed_intents'
-            });
-            logger.fatal(localize('main', 'login-error-intents', {url: `https://discord.com/developers/applications/`}));
-        } else logger.fatal(localize('main', 'login-error', {e}));
-        process.exit();
-    });
+    if (!client.isReady()) {
+        await client.login(config.token).catch(async (e) => {
+            if (e.code === 'TOKEN_INVALID') {
+                if (scnxSetup) await require('./src/functions/scnx-integration').reportIssue(client, {
+                    type: 'CORE_FAILURE',
+                    errorDescription: 'invalid_token'
+                });
+                logger.fatal(localize('main', 'login-error-token'));
+            } else if (e.code === 'DISALLOWED_INTENTS') {
+                if (scnxSetup) await require('./src/functions/scnx-integration').reportIssue(client, {
+                    type: 'CORE_FAILURE',
+                    errorDescription: 'disallowed_intents'
+                });
+                logger.fatal(localize('main', 'login-error-intents', {url: `https://discord.com/developers/applications/`}));
+            } else logger.fatal(localize('main', 'login-error', {e}));
+            process.exit();
+        });
+    }
     const app = JSON.parse((await centra(`https://discord.com/api/applications/@me`, 'GET').header('Authorization', `Bot ${client.token}`).send()).body.toString());
     if (app.bot_require_code_grant) {
         if (scnxSetup) await require('./src/functions/scnx-integration').reportIssue(client, {
@@ -300,7 +275,9 @@ rl.on('line', (input) => {
 async function syncCommandsIfNeeded() {
     const enabledCommands = commands.filter(c => {
         if (!c.module) return true;
-        return client.modules[c.module].enabled;
+        if (!client.modules[c.module].enabled) return false;
+        if (typeof c.disabled === 'function' && c.disabled(client)) return false;
+        return true;
     });
 
     /**
@@ -322,6 +299,32 @@ async function syncCommandsIfNeeded() {
 
     const oldGuildCommands = await (await client.guilds.fetch(config.guildID)).commands.fetch().catch(handleSyncFailure);
     const oldGlobalCommands = await client.application.commands.fetch().catch(handleSyncFailure);
+    const optionTypeMap = {
+        SUB_COMMAND: ApplicationCommandOptionType.Subcommand,
+        SUB_COMMAND_GROUP: ApplicationCommandOptionType.SubcommandGroup,
+        STRING: ApplicationCommandOptionType.String,
+        INTEGER: ApplicationCommandOptionType.Integer,
+        BOOLEAN: ApplicationCommandOptionType.Boolean,
+        USER: ApplicationCommandOptionType.User,
+        CHANNEL: ApplicationCommandOptionType.Channel,
+        ROLE: ApplicationCommandOptionType.Role,
+        MENTIONABLE: ApplicationCommandOptionType.Mentionable,
+        NUMBER: ApplicationCommandOptionType.Number,
+        ATTACHMENT: ApplicationCommandOptionType.Attachment
+    };
+    const channelTypeMap = {
+        GUILD_TEXT: ChannelType.GuildText,
+        GUILD_VOICE: ChannelType.GuildVoice,
+        GUILD_NEWS: ChannelType.GuildAnnouncement,
+        GUILD_STAGE_VOICE: ChannelType.GuildStageVoice,
+        GUILD_CATEGORY: ChannelType.GuildCategory
+    };
+    const permissionMap = {
+        ADMINISTRATOR: PermissionFlagsBits.Administrator,
+        MANAGE_EMOJIS_AND_STICKERS: PermissionFlagsBits.ManageGuildExpressions,
+        MODERATE_MEMBERS: PermissionFlagsBits.ModerateMembers,
+        MANAGE_MESSAGES: PermissionFlagsBits.ManageMessages
+    };
 
     function normalizePermission(permission) {
         if (typeof permission === 'string') {
@@ -615,6 +618,7 @@ async function loadCommandsInDir(dir, moduleName = null) {
                 restricted: props.config.restricted,
                 defaultMemberPermissions: props.config.defaultMemberPermissions || null,
                 options: props.config.options || [],
+                disabled: props.config.disabled || null,
                 subcommands: props.subcommands,
                 beforeSubcommand: props.beforeSubcommand,
                 run: props.run,

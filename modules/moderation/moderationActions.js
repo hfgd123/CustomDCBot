@@ -1,5 +1,5 @@
 const {scheduleJob} = require('node-schedule');
-const {embedType, formatDate, dateToDiscordTimestamp, formatDiscordUserName} = require('../../src/functions/helpers');
+const {embedType, formatDate, dateToDiscordTimestamp, formatDiscordUserName, safeSetFooter} = require('../../src/functions/helpers');
 const {MessageEmbed} = require('discord.js');
 const {localize} = require('../../src/functions/localize');
 const durationParser = require('parse-duration');
@@ -60,7 +60,7 @@ async function moderationAction(client, type, user, victim, reason, additionalDa
                     '%user%': formatDiscordUserName(user.user),
                     '%date%': expiringAt ? formatDate(expiringAt) : null
                 }));
-                if (moduleConfig['changeNicknameOnQuarantine']) await victim.setNickname(moduleConfig['changeNicknameOnMute'].split('%nickname%').join(victim.nickname ? victim.nickname : victim.user.displayName), '[moderation] ' + localize('moderation', 'mute-audit-log-reason', {
+                if (moduleConfig['changeNicknames'] && moduleConfig['changeNicknameOnMute']) await victim.setNickname(moduleConfig['changeNicknameOnMute'].split('%nickname%').join(victim.nickname ? victim.nickname : victim.user.displayName), '[moderation] ' + localize('moderation', 'mute-audit-log-reason', {
                     u: formatDiscordUserName(user.user),
                     r: reason
                 })).catch(() => {
@@ -75,12 +75,21 @@ async function moderationAction(client, type, user, victim, reason, additionalDa
                     '%reason%': reason,
                     '%user%': formatDiscordUserName(user.user)
                 }));
-                if (moduleConfig['changeNicknameOnQuarantine']) await victim.setNickname(victim.user.displayName, '[moderation] ' + localize('moderation', 'unmute-audit-log-reason', {
+                if (moduleConfig['changeNicknames'] && moduleConfig['changeNicknameOnMute']) await victim.setNickname(victim.user.displayName, '[moderation] ' + localize('moderation', 'unmute-audit-log-reason', {
                     u: formatDiscordUserName(user.user),
                     r: reason
                 }));
                 break;
             case 'quarantine':
+                if (victim.roles.cache.get(quarantineRole.id)) {
+                    const previousQuarantineAction = await client.models['moderation']['ModerationAction'].findOne({
+                        where: {victimID: victim.id, type: 'quarantine'},
+                        order: [['createdAt', 'DESC']]
+                    });
+                    if (previousQuarantineAction && previousQuarantineAction.additionalData && previousQuarantineAction.additionalData.roles) {
+                        additionalData.roles = previousQuarantineAction.additionalData.roles;
+                    }
+                }
                 if (!victim.roles.cache.get(quarantineRole.id)) {
                     if (moduleConfig['remove-all-roles-on-quarantine']) {
                         await victim.roles.set([quarantineRole, ...victim.roles.cache.filter(f => f.managed).map(i => i.id)], '[moderation] ' + localize('moderation', 'quarantine-audit-log-reason', {
@@ -117,7 +126,7 @@ async function moderationAction(client, type, user, victim, reason, additionalDa
                         u: formatDiscordUserName(user.user),
                         r: reason
                     }));
-                    if (moduleConfig['changeNicknameOnQuarantine']) await victim.setNickname(moduleConfig['changeNicknameOnQuarantine'].split('%nickname%').join(victim.nickname ? victim.nickname : victim.user.displayName), '[moderation] ' + localize('moderation', 'quarantine-audit-log-reason', {
+                    if (moduleConfig['changeNicknames'] && moduleConfig['changeNicknameOnQuarantine']) await victim.setNickname(moduleConfig['changeNicknameOnQuarantine'].split('%nickname%').join(victim.nickname ? victim.nickname : victim.user.displayName), '[moderation] ' + localize('moderation', 'quarantine-audit-log-reason', {
                         u: formatDiscordUserName(user.user),
                         r: reason
                     })).catch(() => {
@@ -142,7 +151,7 @@ async function moderationAction(client, type, user, victim, reason, additionalDa
                     '%reason%': reason,
                     '%user%': formatDiscordUserName(user.user)
                 }));
-                if (moduleConfig['changeNicknameOnQuarantine']) await victim.setNickname(victim.user.displayName).catch(() => {
+                if (moduleConfig['changeNicknames'] && moduleConfig['changeNicknameOnQuarantine']) await victim.setNickname(victim.user.displayName).catch(() => {
                 });
                 break;
             case 'kick':
@@ -286,17 +295,24 @@ async function moderationAction(client, type, user, victim, reason, additionalDa
                 value: additionalData.channel.toString(),
                 inline: true
             });
-            await channel.send({
-                // eslint-disable-next-line
-                embeds: [new MessageEmbed().setColor(expiringAt ? 0xf1c40f : (type.includes('un') ? 0x2ecc71 : 0xe74c3c)).setFooter({
-                    text: client.strings.footer,
-                    iconURL: client.strings.footerImgUrl
-                }).setTimestamp().setImage(proof ? (proof.proxyURL || proof.url) : null).setAuthor({
+            const modEmbed = new MessageEmbed()
+                .setColor(expiringAt ? 0xf1c40f : (type.includes('un') ? 0x2ecc71 : 0xe74c3c))
+                .setTimestamp()
+                .setImage(proof ? (proof.proxyURL || proof.url) : null)
+                .setAuthor({
                     name: formatDiscordUserName(client.user),
-                    iconURL: client
-                        .user.avatarURL()
-                }).setTitle(`${localize('moderation', 'case')} #${modAction.actionID}`).setThumbnail(client.user.avatarURL()).addField(localize('moderation', 'victim'), `${formatDiscordUserName(victim.user)}\n\`${victim.user.id}\``, true)
-                    .addField('User', `${formatDiscordUserName(user.user)}\n\`${user.user.id}\``, true).addField(localize('moderation', 'action'), expiringAt ? `tmp-${type}` : type, true).addFields(fields).addField(localize('moderation', 'reason'), reason)]
+                    iconURL: client.user.avatarURL()
+                })
+                .setTitle(`${localize('moderation', 'case')} #${modAction.actionID}`)
+                .setThumbnail(client.user.avatarURL())
+                .addField(localize('moderation', 'victim'), `${formatDiscordUserName(victim.user)}\n\`${victim.user.id}\``, true)
+                .addField('User', `${formatDiscordUserName(user.user)}\n\`${user.user.id}\``, true)
+                .addField(localize('moderation', 'action'), expiringAt ? `tmp-${type}` : type, true)
+                .addFields(fields)
+                .addField(localize('moderation', 'reason'), reason);
+            safeSetFooter(modEmbed, client);
+            await channel.send({
+                embeds: [modEmbed]
             });
         }
         const {updateCache} = require('./events/botReady');

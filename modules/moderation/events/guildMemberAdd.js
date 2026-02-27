@@ -1,5 +1,6 @@
 const {memberCache} = require('./botReady');
 const {moderationAction} = require('../moderationActions');
+const {activateLockdown, isLockdownActive} = require('../lockdown');
 const {localize} = require('../../../src/functions/localize');
 const {embedType} = require('../../../src/functions/helpers');
 const {ChannelType, MessageAttachment} = require('discord.js');
@@ -62,6 +63,10 @@ module.exports.run = async (client, guildMember) => {
             const roles = [];
             guildMember.roles.cache.forEach(r => roles.push(r.id));
             await moderationAction(client, antiJoinRaidConfig.action, {user: client.user}, guildMember, `[${localize('moderation', 'anti-join-raid')}] ${localize('moderation', 'raid-detected')}`, {roles: roles});
+            const lockdownConfig = client.configurations['moderation']['lockdown'];
+            if (lockdownConfig && lockdownConfig.enabled && lockdownConfig.autoTriggerOnJoinRaid && !await isLockdownActive(client)) {
+                await activateLockdown(client, localize('moderation', 'lockdown-joinraid-trigger'), localize('moderation', 'lockdown-system'), true);
+            }
         }
     }
 
@@ -171,11 +176,16 @@ async function runJoinGate(guildMember) {
                 await guildMember.roles.remove(guildMember.roles.cache, `[moderation] [${localize('moderation', 'join-gate')}] ${localize('moderation', 'join-gate-fail', {r: reason})}`);
             }
             await guildMember.roles.add(joinGateConfig.roleID, `[moderation] [${localize('moderation', 'join-gate')}] ${localize('moderation', 'join-gate-fail', {r: reason})}`);
-            return;
+        } else {
+            const roles = [];
+            guildMember.roles.cache.forEach(r => roles.push(r.id));
+            await moderationAction(client, joinGateConfig.action, {user: client.user}, guildMember, `[${localize('moderation', 'join-gate')}] ${localize('moderation', 'join-gate-fail', {r: reason})}`, {roles: roles});
         }
-        const roles = [];
-        guildMember.roles.cache.forEach(r => roles.push(r.id));
-        await moderationAction(client, joinGateConfig.action, {user: client.user}, guildMember, `[${localize('moderation', 'join-gate')}] ${localize('moderation', 'join-gate-fail', {r: reason})}`, {roles: roles});
+
+        const lockdownConfig = client.configurations['moderation']['lockdown'];
+        if (lockdownConfig && lockdownConfig.enabled && lockdownConfig.autoTriggerOnJoinGate && !await isLockdownActive(client)) {
+            await activateLockdown(client, localize('moderation', 'lockdown-joingate-trigger'), localize('moderation', 'lockdown-system'), true);
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 const {moderationAction} = require('../moderationActions');
+const {activateLockdown, isLockdownActive} = require('../lockdown');
 const {embedType} = require('../../../src/functions/helpers');
 const {localize} = require('../../../src/functions/localize');
 const stopPhishing = require('stop-discord-phishing');
@@ -72,6 +73,10 @@ module.exports.run = async (client, msg) => {
                 '%reason%': reason,
                 '%userid%': msg.author.id
             }));
+            const lockdownConfig = client.configurations['moderation']['lockdown'];
+            if (lockdownConfig && lockdownConfig.enabled && lockdownConfig.autoTriggerOnSpam && !await isLockdownActive(client)) {
+                await activateLockdown(client, localize('moderation', 'lockdown-spam-trigger'), localize('moderation', 'lockdown-system'), true);
+            }
         }
     }
 

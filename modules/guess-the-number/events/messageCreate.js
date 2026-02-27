@@ -34,7 +34,8 @@ module.exports.run = async (client, msg) => {
     await msg.react('✅');
     game.ended = true;
     await game.save();
-    await lockChannel(msg.channel, client.configurations['guess-the-number']['config'].adminRoles, '[guess-the-number] ' + localize('guess-the-number', 'game-ended'));
+    const isGamechannel = client.configurations['guess-the-number']['channel'].enabled && client.configurations['guess-the-number']['channel'].channel === msg.channel.id;
+    if (!isGamechannel) await lockChannel(msg.channel, client.configurations['guess-the-number']['config'].adminRoles, '[guess-the-number] ' + localize('guess-the-number', 'game-ended'));
     await msg.reply(embedType(client.configurations['guess-the-number']['config']['endMessage'], {
         '%min%': game.min,
         '%max%': game.max,
@@ -42,5 +43,5 @@ module.exports.run = async (client, msg) => {
         '%guessCount%': game.guessCount,
         '%number%': game.number
     }));
-    if (client.configurations['guess-the-number']['channel'].enabled && client.configurations['guess-the-number']['channel'].channel === msg.channel.id) await startGame(msg.channel, randomIntFromInterval(client.configurations['guess-the-number']['channel'].minInt, client.configurations['guess-the-number']['channel'].maxInt), client.configurations['guess-the-number']['channel'].minInt, client.configurations['guess-the-number']['channel'].maxInt);
+    if (isGamechannel) await startGame(msg.channel, randomIntFromInterval(client.configurations['guess-the-number']['channel'].minInt, client.configurations['guess-the-number']['channel'].maxInt), client.configurations['guess-the-number']['channel'].minInt, client.configurations['guess-the-number']['channel'].maxInt);
 };
