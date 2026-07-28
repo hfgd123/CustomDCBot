@@ -21,7 +21,7 @@ module.exports.subcommands = {
             }
         }
         const multiColor = client.guild.features.includes('ENHANCED_ROLE_COLORS');
-        if (!multiColor && (interaction.options.getString('secondary-color') !== null || interaction.options.getBoolean('holographic'))) {
+        if ((!multiColor && (interaction.options.getString('secondary-color') !== null || interaction.options.getBoolean('holographic'))) || !moduleConf['allowEnhancedRoleColors']) {
             colorfulW = false;
         }
         const moduleConf = interaction.client.configurations['color-me']['config'];
@@ -157,7 +157,7 @@ module.exports.subcommands = {
                     timestamp: new Date()
                 });
                 await interaction.member.roles.add(role);
-                if (iconW) {
+                if (iconW && colorfulW) {
                     await interaction.editReply(embedType(moduleStrings['created'], {}));
                 } else {
                     await interaction.editReply(embedType(moduleStrings['createdNoIcon'], {}));
