@@ -1,6 +1,7 @@
 const {localize} = require('../../../src/functions/localize');
 const {client} = require('../../../main');
 const {embedType, dateToDiscordTimestamp} = require('../../../src/functions/helpers');
+const { Constants } = require('discord.js');
 
 module.exports.beforeSubcommand = async function (interaction) {
     await interaction.deferReply({ephemeral: true});
@@ -10,6 +11,7 @@ module.exports.subcommands = {
     'manage': async function (interaction) {
         let roleIcon;
         let iconW = true;
+        let colorfulW = true;
         if (interaction.options.getAttachment('icon') !== null) {
             if (client.guild.features.includes('ROLE_ICONS')) {
                 roleIcon = interaction.options.getAttachment('icon').url;
@@ -17,6 +19,10 @@ module.exports.subcommands = {
                 roleIcon = null;
                 iconW = false;
             }
+        }
+        const multiColor = client.guild.features.includes('ENHANCED_ROLE_COLORS');
+        if (!multiColor && (interaction.options.getString('secondary-color') !== null || interaction.options.getBoolean('holographic'))) {
+            colorfulW = false;
         }
         const moduleConf = interaction.client.configurations['color-me']['config'];
         const moduleStrings = interaction.client.configurations['color-me']['strings'];
@@ -44,29 +50,40 @@ module.exports.subcommands = {
                 userID: interaction.user.id
             }
         });
+        const {
+            roleColor: primaryColor,
+            cancel
+        } = await color(interaction.options.getString('primary-color'), interaction, moduleStrings);
+        let {
+            roleColor: secondaryColor,
+            cancel: cancelSec
+        } = await color(interaction.options.getString('secondary-color'), interaction, moduleStrings);
+        if (!multiColor) {
+            secondaryColor = null;
+        }
+        if (cancel || cancelSec) return;
+        const isHolographic = interaction.options.getBoolean('holographic') && multiColor;
         if (role) {
             role = role.roleID;
-            const {
-                roleColor,
-                cancel
-            } = await color(interaction, moduleStrings);
-            if (cancel) return;
             if (interaction.guild.roles.cache.find(r => r.id === role)) {
                 role = interaction.guild.roles.resolve(role);
-                role.edit(
+                await role.edit(
                     {
                         name: interaction.options.getString('name'),
-                        color: roleColor,
+                        colors: isHolographic ? Constants.HolographicStyle : {
+                            primaryColor: primaryColor,
+                            secondaryColor: secondaryColor
+                        },
                         icon: roleIcon,
                         reason: localize('color-me', 'edit-log-reason', {
                             user: interaction.user.username
                         })
                     }
                 );
-                if (iconW) {
+                if (iconW && colorfulW) {
                     await interaction.editReply(embedType(moduleStrings['updated'], {}));
                 } else {
-                    await interaction.editReply(embedType(moduleStrings['updatedNoIcon'], {}));
+                    await interaction.editReply(embedType(moduleStrings['updatedLimited'], {}));
                 }
             } else {
                 if (interaction.guild.roles.cache.size >= 250) {
@@ -76,7 +93,10 @@ module.exports.subcommands = {
                 role = await interaction.guild.roles.create(
                     {
                         name: interaction.options.getString('name'),
-                        color: roleColor,
+                        colors: isHolographic ? Constants.HolographicStyle : {
+                            primaryColor: primaryColor,
+                            secondaryColor: secondaryColor
+                        },
                         icon: roleIcon,
                         hoist: moduleConf.listRoles,
                         permissions: '',
@@ -85,13 +105,14 @@ module.exports.subcommands = {
                         reason: localize('color-me', 'create-log-reason', {
                             user: interaction.user.username
                         })
-                    }
-                );
+                    });
                 await moduleModel.update({
                     userID: interaction.user.id,
                     roleID: role.id,
                     name: role.name,
-                    color: role.hexColor,
+                    primaryColor: role.colors.primaryColor,
+                    secondaryColor: role.colors.secondaryColor,
+                    holo: !!role.colors.tertiaryColor,
                     timestamp: new Date()
                 }, {
                     where: {
@@ -101,23 +122,21 @@ module.exports.subcommands = {
                 if (!interaction.member.roles.cache.has(role)) {
                     await interaction.member.roles.add(role);
                 }
-                if (iconW) {
+                if (iconW && colorfulW) {
                     await interaction.editReply(embedType(moduleStrings['updated'], {}));
                 } else {
-                    await interaction.editReply(embedType(moduleStrings['updatedNoIcon'], {}));
+                    await interaction.editReply(embedType(moduleStrings['updatedLimited'], {}));
                 }
             }
         } else {
-            const {
-                roleColor,
-                cancel
-            } = await color(interaction, moduleStrings);
-            if (cancel) return;
             try {
                 role = await interaction.guild.roles.create(
                     {
                         name: interaction.options.getString('name'),
-                        color: roleColor,
+                        colors: isHolographic ? Constants.HolographicStyle : {
+                            primaryColor: primaryColor,
+                            secondaryColor: secondaryColor
+                        },
                         icon: roleIcon,
                         hoist: moduleConf.listRoles,
                         permissions: '',
@@ -132,7 +151,9 @@ module.exports.subcommands = {
                     userID: interaction.user.id,
                     roleID: role.id,
                     name: role.name,
-                    color: role.hexColor,
+                    primaryColor: role.colors.primaryColor,
+                    secondaryColor: role.colors.secondaryColor,
+                    holo: !!role.colors.tertiaryColor,
                     timestamp: new Date()
                 });
                 await interaction.member.roles.add(role);
@@ -168,7 +189,7 @@ module.exports.subcommands = {
             role = role.roleID;
             if (interaction.guild.roles.cache.find(r => r.id === role)) {
                 role = interaction.guild.roles.resolve(role);
-                role.delete(localize('color-me', 'delete-manual-log-reason', {
+                await role.delete(localize('color-me', 'delete-manual-log-reason', {
                     user: interaction.member.user.username
                 }));
                 await interaction.editReply(await embedType(moduleStrings['removed'], {}));
@@ -196,8 +217,20 @@ module.exports.config = {
                 {
                     type: 'STRING',
                     required: false,
-                    name: 'color',
-                    description: localize('color-me', 'color-option-description')
+                    name: 'primary-color',
+                    description: localize('color-me', 'primary-color-option-description')
+                },
+                {
+                    type: 'STRING',
+                    required: false,
+                    name: 'secondary-color',
+                    description: localize('color-me', 'secondary-color-option-description')
+                },
+                {
+                    type: 'BOOLEAN',
+                    required: false,
+                    name: 'holographic',
+                    description: localize('color-me', 'holographic-option-description')
                 },
                 {
                     type: 'ATTACHMENT',
@@ -227,9 +260,9 @@ module.exports.config = {
  * Gets a color from the String of a command option
  * @returns {Promise<{roleColor: string|number, cancel: boolean}>}
  */
-async function color(interaction, moduleStrings) {
-    if (interaction.options.getString('color')) {
-        let roleColor = interaction.options.getString('color');
+async function color(colorString, interaction, moduleStrings) {
+    if (colorString) {
+        let roleColor = colorString;
         if (!roleColor.startsWith('#')) {
             roleColor = '#' + roleColor;
         }
@@ -246,12 +279,12 @@ async function color(interaction, moduleStrings) {
         };
     }
     return {
-        roleColor: 0xF1C40F,
+        roleColor: 0x000000,
         cancel: false
     };
 }
 
-// Exported for unit testing of the colour-validation logic.
+// Exported for unit testing of the color-validation logic.
 module.exports.color = color;
 
 /**

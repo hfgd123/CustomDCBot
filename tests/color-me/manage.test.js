@@ -15,37 +15,41 @@ const cmd = require('../../modules/color-me/commands/color-me');
 const strings = {
     cooldown: 'cooldown %cooldown%',
     updated: 'updated',
-    updatedNoIcon: 'updated-no-icon',
+    updatedLimited: 'updated-limited',
     created: 'created',
     createdNoIcon: 'created-no-icon',
     roleLimit: 'role-limit',
     invalidColor: 'invalid-color'
 };
 
-function setSharedModel(model) {
+function setSharedModel(model, features = []) {
     mainStub.client.models = {'color-me': {Role: model}};
     mainStub.client.logger = {error: jest.fn()};
-    mainStub.client.guild = {features: []};
+    mainStub.client.guild = {features};
 }
 
 function makeInteraction({
                              found = null,
-                             color = null,
+                             primaryColor = null,
+                             secondaryColor = null,
+                             holographic = false,
                              name = 'My Colour',
                              icon = null,
                              roleCacheSize = 5,
                              roleExists = true,
                              createImpl,
-                             config = {}
+                             config = {},
+                             features = []
                          } = {}) {
     const createdRole = {
         id: 'new-role',
         name,
-        hexColor: '#123456',
+        colors: {primaryColor: '#123456', secondaryColor: null, tertiaryColor: null},
         edit: jest.fn()
     };
     const liveRole = {
         id: found ? found.roleID : 'live',
+        colors: {primaryColor: '#123456', secondaryColor: null, tertiaryColor: null},
         edit: jest.fn()
     };
     const model = {
@@ -53,7 +57,7 @@ function makeInteraction({
         create: createImpl || jest.fn().mockResolvedValue(createdRole),
         update: jest.fn().mockResolvedValue()
     };
-    setSharedModel(model);
+    setSharedModel(model, features);
     const rolesCache = {
         size: roleCacheSize,
         find: () => (roleExists ? liveRole : undefined),
@@ -82,7 +86,8 @@ function makeInteraction({
         },
         options: {
             getAttachment: () => icon,
-            getString: (n) => (n === 'color' ? color : n === 'name' ? name : null)
+            getBoolean: (n) => (n === 'holographic' ? holographic : null),
+            getString: (n) => (n === 'primary-color' ? primaryColor : n === 'secondary-color' ? secondaryColor : n === 'name' ? name : null)
         },
         client: {
             configurations: {
@@ -156,7 +161,7 @@ test('reports the role limit when the stored role is gone and the guild is at 25
 test('cancels on invalid colour without creating a role', async () => {
     const i = makeInteraction({
         found: null,
-        color: 'ZZZZZZ'
+        primaryColor: 'ZZZZZZ'
     });
     await cmd.subcommands.manage(i);
     expect(i.guild.roles.create).not.toHaveBeenCalled();
