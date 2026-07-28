@@ -20,13 +20,14 @@ module.exports.subcommands = {
                 iconW = false;
             }
         }
+        const moduleConf = interaction.client.configurations['color-me']['config'];
+        const moduleStrings = interaction.client.configurations['color-me']['strings'];
+        const moduleModel = interaction.client.models['color-me']['Role'];
+
         const multiColor = client.guild.features.includes('ENHANCED_ROLE_COLORS');
         if ((!multiColor && (interaction.options.getString('secondary-color') !== null || interaction.options.getBoolean('holographic'))) || !moduleConf['allowEnhancedRoleColors']) {
             colorfulW = false;
         }
-        const moduleConf = interaction.client.configurations['color-me']['config'];
-        const moduleStrings = interaction.client.configurations['color-me']['strings'];
-        const moduleModel = interaction.client.models['color-me']['Role'];
 
         const pos = moduleConf.rolePosition
             ? interaction.guild.roles.resolve(moduleConf.rolePosition).position

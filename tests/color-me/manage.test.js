@@ -10,6 +10,7 @@
  * embedType is the real helper; localize/main auto-stubbed.
  */
 const mainStub = require('../__stubs__/main');
+const {Constants} = require('discord.js');
 const cmd = require('../../modules/color-me/commands/color-me');
 
 const strings = {
@@ -130,6 +131,38 @@ test('creates a new colour role when the user has no record', async () => {
     expect(i._model.create).toHaveBeenCalled();
     expect(i.member.roles.add).toHaveBeenCalledWith(i._createdRole);
     expect(i.editReply).toHaveBeenCalled();
+});
+
+test('creates a holographic role when the guild supports enhanced colors', async () => {
+    const i = makeInteraction({
+        found: null,
+        holographic: true,
+        features: ['ENHANCED_ROLE_COLORS'],
+        config: {allowEnhancedRoleColors: true}
+    });
+    await cmd.subcommands.manage(i);
+    expect(i.guild.roles.create).toHaveBeenCalledWith(expect.objectContaining({
+        colors: Constants.HolographicStyle
+    }));
+});
+
+test('ignores secondary-color and holographic when the guild lacks enhanced colors', async () => {
+    const i = makeInteraction({
+        found: null,
+        secondaryColor: 'ABCDEF',
+        holographic: true,
+        features: [],
+        config: {allowEnhancedRoleColors: true}
+    });
+    await cmd.subcommands.manage(i);
+    expect(i.guild.roles.create).toHaveBeenCalledWith(expect.objectContaining({
+        colors: expect.objectContaining({secondaryColor: null})
+    }));
+    expect(i.editReply).toHaveBeenCalledWith(expect.objectContaining({}));
+    expect(i._model.create).toHaveBeenCalledWith(expect.objectContaining({
+        secondaryColor: null,
+        holo: false
+    }));
 });
 
 test('edits the live role in place when a record + role exist (past cooldown)', async () => {
