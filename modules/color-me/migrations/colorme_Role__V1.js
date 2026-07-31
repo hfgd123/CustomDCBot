@@ -20,6 +20,7 @@ module.exports = {
             }
             if (!description.holo) {
                 await queryInterface.addColumn(TABLE, 'holo', {
+                    defaultValue: false,
                     type: DataTypes.BOOLEAN
                 }, {transaction});
             }
