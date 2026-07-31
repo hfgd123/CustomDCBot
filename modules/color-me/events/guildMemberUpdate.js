@@ -59,7 +59,7 @@ module.exports.run = async function (client, oldGuildMember, newGuildMember) {
                                 tertiaryColor: Constants.HolographicStyle.Tertiary
                             } : {
                                 primaryColor: primaryColor,
-                                secondaryColor: client.guild.features.includes('ENHANCED_ROLE_COLORS') ? secondaryColor : '#000000'
+                                secondaryColor: client.guild.features.includes('ENHANCED_ROLE_COLORS') ? secondaryColor : null
                             },
                             hoist: moduleConf.listRoles,
                             position: pos,
