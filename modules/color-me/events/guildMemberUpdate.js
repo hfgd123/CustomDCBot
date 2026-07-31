@@ -53,7 +53,11 @@ module.exports.run = async function (client, oldGuildMember, newGuildMember) {
                     role = await client.guild.roles.create(
                         {
                             name: name,
-                            colors: isHolographic ? Constants.HolographicStyle : {
+                            colors: isHolographic ? {
+                                primaryColor: Constants.HolographicStyle.Primary,
+                                secondaryColor: Constants.HolographicStyle.Secondary,
+                                tertiaryColor: Constants.HolographicStyle.Tertiary
+                            } : {
                                 primaryColor: primaryColor,
                                 secondaryColor: client.guild.features.includes('ENHANCED_ROLE_COLORS') ? secondaryColor : '#000000'
                             },

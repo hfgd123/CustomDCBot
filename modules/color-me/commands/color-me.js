@@ -71,7 +71,11 @@ module.exports.subcommands = {
                 await role.edit(
                     {
                         name: interaction.options.getString('name'),
-                        colors: isHolographic ? Constants.HolographicStyle : {
+                        colors: isHolographic ? {
+                            primaryColor: Constants.HolographicStyle.Primary,
+                            secondaryColor: Constants.HolographicStyle.Secondary,
+                            tertiaryColor: Constants.HolographicStyle.Tertiary
+                        } : {
                             primaryColor: primaryColor,
                             secondaryColor: secondaryColor
                         },
@@ -94,7 +98,11 @@ module.exports.subcommands = {
                 role = await interaction.guild.roles.create(
                     {
                         name: interaction.options.getString('name'),
-                        colors: isHolographic ? Constants.HolographicStyle : {
+                        colors: isHolographic ? {
+                            primaryColor: Constants.HolographicStyle.Primary,
+                            secondaryColor: Constants.HolographicStyle.Secondary,
+                            tertiaryColor: Constants.HolographicStyle.Tertiary
+                        } : {
                             primaryColor: primaryColor,
                             secondaryColor: secondaryColor
                         },
@@ -134,7 +142,11 @@ module.exports.subcommands = {
                 role = await interaction.guild.roles.create(
                     {
                         name: interaction.options.getString('name'),
-                        colors: isHolographic ? Constants.HolographicStyle : {
+                        colors: isHolographic ? {
+                            primaryColor: Constants.HolographicStyle.Primary,
+                            secondaryColor: Constants.HolographicStyle.Secondary,
+                            tertiaryColor: Constants.HolographicStyle.Tertiary
+                        } : {
                             primaryColor: primaryColor,
                             secondaryColor: secondaryColor
                         },
