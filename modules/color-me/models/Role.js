@@ -13,7 +13,10 @@ module.exports = class Role extends Model {
             name: DataTypes.STRING,
             primaryColor: DataTypes.STRING,
             secondaryColor: DataTypes.STRING,
-            holo: DataTypes.BOOLEAN,
+            holo: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: false
+            },
             timestamp: DataTypes.DATE
         }, {
             tableName: 'colorme_Role',
