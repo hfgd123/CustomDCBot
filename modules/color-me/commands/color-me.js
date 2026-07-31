@@ -24,8 +24,8 @@ module.exports.subcommands = {
         const moduleStrings = interaction.client.configurations['color-me']['strings'];
         const moduleModel = interaction.client.models['color-me']['Role'];
 
-        const multiColor = client.guild.features.includes('ENHANCED_ROLE_COLORS');
-        if ((!multiColor && (interaction.options.getString('secondary-color') !== null || interaction.options.getBoolean('holographic'))) || !moduleConf['allowEnhancedRoleColors']) {
+        const multiColor = client.guild.features.includes('ENHANCED_ROLE_COLORS') && moduleConf['allowEnhancedRoleColors'];
+        if (!multiColor && (interaction.options.getString('secondary-color') !== null || interaction.options.getBoolean('holographic'))) {
             colorfulW = false;
         }
 
