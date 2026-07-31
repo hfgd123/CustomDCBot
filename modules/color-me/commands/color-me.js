@@ -90,6 +90,19 @@ module.exports.subcommands = {
                         })
                     }
                 );
+                await moduleModel.update({
+                    userID: interaction.user.id,
+                    roleID: role.id,
+                    name: role.name,
+                    primaryColor: role.colors.primaryColor,
+                    secondaryColor: role.colors.secondaryColor,
+                    holo: !!role.colors.tertiaryColor,
+                    timestamp: new Date()
+                }, {
+                    where: {
+                        userID: interaction.user.id
+                    }
+                });
                 if (iconW && colorfulW) {
                     await interaction.editReply(embedType(moduleStrings['updated'], {}));
                 } else {
