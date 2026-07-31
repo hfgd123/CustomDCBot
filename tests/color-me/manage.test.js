@@ -142,7 +142,11 @@ test('creates a holographic role when the guild supports enhanced colors', async
     });
     await cmd.subcommands.manage(i);
     expect(i.guild.roles.create).toHaveBeenCalledWith(expect.objectContaining({
-        colors: Constants.HolographicStyle
+        colors: {
+            primaryColor: Constants.HolographicStyle.Primary,
+            secondaryColor: Constants.HolographicStyle.Secondary,
+            tertiaryColor: Constants.HolographicStyle.Tertiary
+        }
     }));
 });
 
