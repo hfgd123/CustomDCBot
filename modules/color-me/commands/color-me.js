@@ -55,11 +55,16 @@ module.exports.subcommands = {
             roleColor: primaryColor,
             cancel
         } = await color(interaction.options.getString('primary-color'), interaction, moduleStrings);
-        let {
-            roleColor: secondaryColor,
-            cancel: cancelSec
-        } = await color(interaction.options.getString('secondary-color'), interaction, moduleStrings);
-        if (!multiColor) {
+
+        let secondaryColor, cancelSec;
+        if (multiColor) {
+            let {
+                roleColor: secondaryColorTemp,
+                cancel: cancelSecTemp
+            } = await color(interaction.options.getString('secondary-color'), interaction, moduleStrings);
+            secondaryColor = secondaryColorTemp;
+            cancelSec = cancelSecTemp;
+        } else {
             secondaryColor = null;
         }
         if (cancel || cancelSec) return;
